@@ -9,7 +9,9 @@ module Tire
       def initialize(indices=nil, options={}, &block)
         @indices = Array(indices)
         @types   = Array(options.delete(:type)).map { |type| Utils.escape(type) }
-        @options = options
+        @payload = options.delete(:payload)
+        @options = options.slice!(:load, :wrapper)
+        @result_options = options
 
         @path    = ['/', @indices.join(','), @types.join(','), '_search'].compact.join('/').squeeze('/')
 
@@ -97,7 +99,7 @@ module Tire
           raise SearchRequestFailed, @response.to_s
         end
         @json     = MultiJson.decode(@response.body)
-        @results  = Results::Collection.new(@json, @options)
+        @results  = Results::Collection.new(@json, @result_options)
         return self
       ensure
         logged
@@ -108,7 +110,7 @@ module Tire
       end
 
       def to_hash
-        @options.delete(:payload) || begin
+        @payload || begin
           request = {}
           request.update( { :query  => @query.to_hash } )    if @query
           request.update( { :sort   => @sort.to_ary   } )    if @sort
